@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Air Strum Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b0b0b;
+            --accent-color: #00c2ff;
+            --selected-color: #ffd54f;
+            --success-color: #4caf50;
+            --text-primary: #f5f5f5;
+            --text-muted: #828282;
+            --glass-bg: rgba(35, 35, 35, 0.45);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glow-color: rgba(0, 194, 255, 0.2);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+            background-image: radial-gradient(circle at 10% 20%, rgba(0, 194, 255, 0.05) 0%, transparent 40%),
+                              radial-gradient(circle at 90% 80%, rgba(76, 175, 80, 0.05) 0%, transparent 40%);
+        }
+
+        header {
+            width: 100%;
+            max-width: 1400px;
+            padding: 2.5rem 2rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-weight: 800;
+            font-size: 2.2rem;
+            letter-spacing: 2px;
+            background: linear-gradient(135deg, var(--accent-color), var(--success-color));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(0, 194, 255, 0.3);
+        }
+
+        .tagline {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            font-weight: 300;
+        }
+
+        .main-container {
+            width: 100%;
+            max-width: 1400px;
+            padding: 0 2rem 3rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            flex-grow: 1;
+        }
+
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            transition: all 0.3s ease;
+        }
+
+        .video-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .video-feed {
+            width: 100%;
+            aspect-ratio: 16/9;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+            object-fit: cover;
+            background-color: #111;
+        }
+
+        .sidebar {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            width: 100%;
+        }
+
+        @media (max-width: 900px) {
+            .sidebar {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .status-card {
+            background: rgba(20, 20, 20, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            border-radius: 16px;
+            padding: 1.2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .status-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+
+        .status-value {
+            font-size: 1.3rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .indicator-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: var(--text-muted);
+            transition: all 0.3s ease;
+            box-shadow: 0 0 8px rgba(130, 130, 130, 0.4);
+        }
+
+        .indicator-dot.active {
+            background-color: var(--success-color);
+            box-shadow: 0 0 12px var(--success-color);
+            animation: pulse-glow 1.5s infinite;
+        }
+
+        .indicator-dot.inactive {
+            background-color: #ff5252;
+            box-shadow: 0 0 12px #ff5252;
+        }
+
+        .chord-display-card {
+            grid-column: span 2;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 2rem 1.2rem;
+            background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(0, 194, 255, 0.05));
+            border: 1px solid rgba(76, 175, 80, 0.15);
+        }
+
+        .chord-value {
+            font-size: 3.5rem;
+            font-weight: 800;
+            color: var(--success-color);
+            text-shadow: 0 0 20px rgba(76, 175, 80, 0.3);
+            margin-top: 0.2rem;
+            transition: transform 0.1s ease;
+        }
+
+        .pulse-chord {
+            transform: scale(1.15);
+        }
+
+        .guide-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 1.2rem;
+        }
+
+        .guide-item {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+        }
+
+        .guide-num {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--accent-color);
+            flex-shrink: 0;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .guide-text h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.2rem;
+        }
+
+        .guide-text p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        .footer {
+            width: 100%;
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.03);
+            background: rgba(10, 10, 10, 0.6);
+            margin-top: auto;
+        }
+
+        @keyframes pulse-glow {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div>
+            <div class="logo">AIR STRUM</div>
+            <div class="tagline">Virtual Gesture-Powered Acoustic Guitar</div>
+        </div>
+        <div class="glass-panel" style="padding: 0.6rem 1.2rem; border-radius: 12px;">
+            <span class="status-label" style="margin-right: 0.5rem;">FPS:</span>
+            <span id="fps-val" style="font-weight: 600; color: var(--accent-color);">0</span>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <!-- Live Stream Panel -->
+        <div class="glass-panel video-container">
+            <img class="video-feed" src="/video_feed" alt="Air Strum Live Video Feed">
+        </div>
+
+        <!-- Sidebar status & guide -->
+        <div class="sidebar">
+            <!-- Tracking Status -->
+            <div class="glass-panel">
+                <h3 style="margin-bottom: 1.2rem; font-weight: 600; font-size: 1.2rem;">Live Status</h3>
+                <div class="status-grid">
+                    <!-- Left Hand -->
+                    <div class="status-card">
+                        <span class="status-label">Left Hand (Select)</span>
+                        <div class="status-value">
+                            <div id="left-dot" class="indicator-dot"></div>
+                            <span id="left-status">Searching</span>
+                        </div>
+                    </div>
+                    <!-- Right Hand -->
+                    <div class="status-card">
+                        <span class="status-label">Right Hand (Strum)</span>
+                        <div class="status-value">
+                            <div id="right-dot" class="indicator-dot"></div>
+                            <span id="right-status">Searching</span>
+                        </div>
+                    </div>
+                    <!-- Active Chord -->
+                    <div class="status-card chord-display-card">
+                        <span class="status-label">Active Chord</span>
+                        <div class="chord-value" id="chord-val">C</div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- How to Play Guide -->
+            <div class="glass-panel">
+                <h3 style="margin-bottom: 1.2rem; font-weight: 600; font-size: 1.2rem;">How to Play</h3>
+                <ul class="guide-list">
+                    <li class="guide-item">
+                        <div class="guide-num">1</div>
+                        <div class="guide-text">
+                            <h4>Select Chord</h4>
+                            <p>Hold up your left hand index finger. Move the pointer over a segment on the chord wheel and hover for 300ms to lock it in.</p>
+                        </div>
+                    </li>
+                    <li class="guide-item">
+                        <div class="guide-num">2</div>
+                        <div class="guide-text">
+                            <h4>Pluck & Strum Strings</h4>
+                            <p>Move your right hand index finger over the 6 vertical strings on the right. Sweep across them to strum, or cross individual strings to pluck specific notes!</p>
+                        </div>
+                    </li>
+                    <li class="guide-item">
+                        <div class="guide-num">3</div>
+                        <div class="guide-text">
+                            <h4>Hotkeys</h4>
+                            <p>Press <strong>D</strong> in the terminal to toggle tracking skeletons overlay, or <strong>C</strong> to cycle camera sources.</p>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        Air Strum Dashboard • Built with Python, Flask, OpenCV & MediaPipe.
+    </footer>
+
+    <script>
+        let lastChord = "C";
+        const chordValEl = document.getElementById('chord-val');
+        
+        async function fetchStatus() {
+            try {
+                const response = await fetch('/status');
+                if (!response.ok) return;
+                const data = await response.json();
+                
+                // Update Left Hand
+                const leftDot = document.getElementById('left-dot');
+                const leftStatus = document.getElementById('left-status');
+                if (data.left_tracked) {
+                    leftDot.className = 'indicator-dot active';
+                    leftStatus.textContent = 'Tracked';
+                } else {
+                    leftDot.className = 'indicator-dot';
+                    leftStatus.textContent = 'Searching';
+                }
+
+                // Update Right Hand
+                const rightDot = document.getElementById('right-dot');
+                const rightStatus = document.getElementById('right-status');
+                if (data.right_tracked) {
+                    rightDot.className = 'indicator-dot active';
+                    rightStatus.textContent = 'Tracked';
+                } else {
+                    rightDot.className = 'indicator-dot';
+                    rightStatus.textContent = 'Searching';
+                }
+
+                // Update Chord with quick transition effect if changed
+                if (data.active_chord !== lastChord) {
+                    lastChord = data.active_chord;
+                    chordValEl.textContent = lastChord;
+                    chordValEl.classList.add('pulse-chord');
+                    setTimeout(() => {
+                        chordValEl.classList.remove('pulse-chord');
+                    }, 100);
+                }
+
+                // Update FPS
+                document.getElementById('fps-val').textContent = data.fps;
+
+
+
+            } catch (err) {
+                console.error("Error fetching status:", err);
+            }
+        }
+
+        // Poll status every 100ms
+        setInterval(fetchStatus, 100);
+    </script>
+</body>
+</html>
