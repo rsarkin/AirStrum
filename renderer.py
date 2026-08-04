@@ -129,8 +129,8 @@ class UIRenderer:
         # 4. Draw Strum Ripples (UI Overlay layer)
         self._draw_strum_ripples(ui_overlay)
         
-        # 5. Draw Virtual Strings (UI Overlay layer)
-        self._draw_virtual_strings(ui_overlay, active_chord)
+        # 5. Draw Virtual Strings (UI Overlay layer) - Disabled: Invisible strings request
+        # self._draw_virtual_strings(ui_overlay, active_chord)
         
         # 6. Draw Hand Cursors & Selection progress
         self._draw_hand_cursors(ui_overlay, hands_data, hovered_chord, hover_progress)
@@ -197,13 +197,18 @@ class UIRenderer:
                 color = config.COLOR_GLASS_BG
                 opacity_factor = 0.6
                 
-            # Draw outer sector
+            # Draw filled sector
             cv2.ellipse(overlay, (cx, cy), (r_out_scaled, r_out_scaled), 0, start_angle, end_angle, color, -1)
+            # Antialias outer edge of filled sector to remove jaggies
+            cv2.ellipse(overlay, (cx, cy), (r_out_scaled, r_out_scaled), 0, start_angle, end_angle, color, 1, cv2.LINE_AA)
             
-            # Draw a subtle outline for hovered/active slices
-            if chord == hovered_chord or chord == active_chord:
+            # Draw a clean outline with LINE_AA for hovered/active slices to make them look ultra-sharp
+            if chord == hovered_chord:
                 cv2.ellipse(overlay, (cx, cy), (r_out_scaled, r_out_scaled), 0, start_angle, end_angle,
-                            config.COLOR_TEXT_PRIMARY, 2)
+                            config.COLOR_ACCENT, 2, cv2.LINE_AA)
+            elif chord == active_chord:
+                cv2.ellipse(overlay, (cx, cy), (r_out_scaled, r_out_scaled), 0, start_angle, end_angle,
+                            config.COLOR_SUCCESS, 2, cv2.LINE_AA)
             
             # Render Chord label text
             # Compute text coordinate in center of slice
@@ -212,36 +217,47 @@ class UIRenderer:
             tx = int(cx + r_mid * math.cos(angle_rad))
             ty = int(cy + r_mid * math.sin(angle_rad))
             
-            # Font size scaling matching segment scale (scaled down for slightly larger wheel)
-            font_scale = 0.5 * scale
-            font_thickness = 1
+            # Font size scaling matching segment scale (solid DUPLEX font)
+            font_scale = 0.45 * scale
+            font_thickness = 2
+            font_face = cv2.FONT_HERSHEY_DUPLEX
             
-            text_size = cv2.getTextSize(chord, cv2.FONT_HERSHEY_SIMPLEX, font_scale, font_thickness)[0]
+            text_size = cv2.getTextSize(chord, font_face, font_scale, font_thickness)[0]
             text_x = tx - text_size[0] // 2
             text_y = ty + text_size[1] // 2
             
-            # Draw label
-            cv2.putText(overlay, chord, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX,
+            # Draw drop-shadow
+            cv2.putText(overlay, chord, (text_x + 1, text_y + 1), font_face,
+                        font_scale, (10, 10, 10), font_thickness, cv2.LINE_AA)
+            # Draw main label
+            cv2.putText(overlay, chord, (text_x, text_y), font_face,
                         font_scale, config.COLOR_TEXT_PRIMARY, font_thickness, cv2.LINE_AA)
             
         # Draw central dark mask circle to shape the segments into donut slices
-        cv2.circle(overlay, (cx, cy), r_in, (11, 11, 11), -1)
-        # Inner thin silver divider ring
-        cv2.circle(overlay, (cx, cy), r_in, (70, 70, 70), 1, cv2.LINE_AA)
+        # We draw a slightly lighter dark gray circle for a premium glass mask look
+        cv2.circle(overlay, (cx, cy), r_in, (16, 16, 16), -1)
         
-        # Render current active chord in the center of the wheel
+        # Double-ring borders for high-quality definition
+        cv2.circle(overlay, (cx, cy), r_in, (80, 80, 80), 1, cv2.LINE_AA)
+        cv2.circle(overlay, (cx, cy), r_in + 2, (35, 35, 35), 1, cv2.LINE_AA)
+        
+        # Draw outer thin grouping ring around the entire wheel
+        cv2.circle(overlay, (cx, cy), r_out_base, (75, 75, 75), 1, cv2.LINE_AA)
+        
+        # Render current active chord in the center of the wheel (bold DUPLEX font)
         center_text = active_chord
         center_font_scale = 0.85
         center_thickness = 2
-        center_size = cv2.getTextSize(center_text, cv2.FONT_HERSHEY_SIMPLEX,
+        center_face = cv2.FONT_HERSHEY_DUPLEX
+        center_size = cv2.getTextSize(center_text, center_face,
                                       center_font_scale, center_thickness)[0]
         cc_x = cx - center_size[0] // 2
         cc_y = cy + center_size[1] // 2
         
         # Glowing shadow text for depth
-        cv2.putText(overlay, center_text, (cc_x + 1, cc_y + 1), cv2.FONT_HERSHEY_SIMPLEX,
-                    center_font_scale, (0, 0, 0), center_thickness, cv2.LINE_AA)
-        cv2.putText(overlay, center_text, (cc_x, cc_y), cv2.FONT_HERSHEY_SIMPLEX,
+        cv2.putText(overlay, center_text, (cc_x + 1, cc_y + 1), center_face,
+                    center_font_scale, (10, 10, 10), center_thickness, cv2.LINE_AA)
+        cv2.putText(overlay, center_text, (cc_x, cc_y), center_face,
                     center_font_scale, config.COLOR_SUCCESS, center_thickness, cv2.LINE_AA)
 
     def _draw_strum_ripples(self, overlay: cv2.Mat) -> None:
@@ -335,18 +351,8 @@ class UIRenderer:
         """Draws cursor points and hover circular progress indicators."""
         # 1. Left Hand Cursor (Disabled: No hand cursor shown on screen)
         
-        # 2. Right Hand Cursor (Pick tracking pointer)
-        right_hand = hands_data.get("Right", {})
-        if "index_tip" in right_hand:
-            rx, ry = int(right_hand["index_tip"][0]), int(right_hand["index_tip"][1])
-            # Draw green pick indicator
-            cv2.circle(overlay, (rx, ry), 10, config.COLOR_GLOW_R_HAND, -1, cv2.LINE_AA)
-            cv2.circle(overlay, (rx, ry), 15, config.COLOR_SUCCESS, 2, cv2.LINE_AA)
-            
-            # If history indicates velocity, draw speed trailing dots
-            if "index_mcp" in right_hand:
-                px, py = int(right_hand["index_mcp"][0]), int(right_hand["index_mcp"][1])
-                cv2.line(overlay, (rx, ry), (px, py), config.COLOR_SUCCESS, 2, cv2.LINE_AA)
+        # 2. Right Hand Cursor (Disabled: Invisible right side pick cursor request)
+        pass
 
     def _draw_status_panel(self, frame: cv2.Mat, hands_data: Dict[str, Dict[str, Tuple[float, float]]],
                            active_chord: str, fps: float, synth_mode: bool) -> None:

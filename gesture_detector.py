@@ -20,9 +20,10 @@ class GestureDetector:
         self.last_strum_time = 0.0
         self.last_strum_direction: Optional[str] = None
 
-        # String tracking coordinates
-        self.last_x: Optional[float] = None
-        self.last_y: Optional[float] = None
+        # String tracking coordinates for index strumming finger
+        self.last_positions = {
+            "index_tip": None
+        }
         self.string_cooldowns = [0.0] * config.NUM_STRINGS
         
         # Calculate Y coordinate positions of the strings (horizontal strings)
@@ -81,35 +82,39 @@ class GestureDetector:
         Returns a list of string indices [0..5] that were crossed/plucked in this frame.
         """
         plucked_strings = []
-        if "index_tip" not in right_hand_landmarks:
-            # Reset last position when hand is lost
-            self.last_x = None
-            self.last_y = None
-            return plucked_strings
-            
-        x, y = right_hand_landmarks["index_tip"]
         current_time = time.time()
         
-        if self.last_x is not None and self.last_y is not None:
-            # Check horizontal bounds: did the cursor reside in the X span?
-            in_x_bounds = (config.STRINGS_X_START <= x <= config.STRINGS_X_END) or \
-                          (config.STRINGS_X_START <= self.last_x <= config.STRINGS_X_END)
+        fingers = ["index_tip"]
+        
+        for finger in fingers:
+            if finger not in right_hand_landmarks:
+                self.last_positions[finger] = None
+                continue
+                
+            x, y = right_hand_landmarks[finger]
+            last_pos = self.last_positions[finger]
             
-            if in_x_bounds:
-                for i, str_y in enumerate(self.string_ys):
-                    # Check vertical crossing
-                    crossed = False
-                    if self.last_y < str_y <= y:
-                        crossed = True
-                    elif y <= str_y < self.last_y:
-                        crossed = True
-                        
-                    if crossed:
-                        # Enforce per-string cooldown
-                        if current_time - self.string_cooldowns[i] > config.STRING_COOLDOWN:
-                            plucked_strings.append(i)
-                            self.string_cooldowns[i] = current_time
+            if last_pos is not None:
+                last_x, last_y = last_pos
+                # Check horizontal bounds: did the cursor reside in the X span?
+                in_x_bounds = (config.STRINGS_X_START <= x <= config.STRINGS_X_END) or \
+                              (config.STRINGS_X_START <= last_x <= config.STRINGS_X_END)
+                
+                if in_x_bounds:
+                    for i, str_y in enumerate(self.string_ys):
+                        # Check vertical crossing
+                        crossed = False
+                        if last_y < str_y <= y:
+                            crossed = True
+                        elif y <= str_y < last_y:
+                            crossed = True
                             
-        self.last_x = x
-        self.last_y = y
+                        if crossed:
+                            # Enforce per-string cooldown
+                            if current_time - self.string_cooldowns[i] > config.STRING_COOLDOWN:
+                                plucked_strings.append(i)
+                                self.string_cooldowns[i] = current_time
+                                
+            self.last_positions[finger] = (x, y)
+            
         return plucked_strings

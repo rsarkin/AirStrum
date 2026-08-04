@@ -39,7 +39,7 @@
 
         header {
             width: 100%;
-            max-width: 1400px;
+            max-width: 960px;
             padding: 2.5rem 2rem 1.5rem;
             display: flex;
             justify-content: space-between;
@@ -65,7 +65,7 @@
 
         .main-container {
             width: 100%;
-            max-width: 1400px;
+            max-width: 960px;
             padding: 0 2rem 3rem;
             display: flex;
             flex-direction: column;
@@ -386,8 +386,8 @@
             }
         }
 
-        // Poll status every 100ms
-        setInterval(fetchStatus, 100);
+        // Poll status every 33ms (30 times/sec) for real-time responsiveness
+        setInterval(fetchStatus, 33);
     </script>
 </body>
 </html>

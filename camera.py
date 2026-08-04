@@ -18,9 +18,10 @@ class Camera:
         self.resolution = resolution
         self.cap = cv2.VideoCapture(self.device_index)
         
-        # Set preferred resolution
+        # Set preferred resolution and frame rate
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, resolution[0])
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, resolution[1])
+        self.cap.set(cv2.CAP_PROP_FPS, 60)
         
         self.frame = None
         self.running = False

@@ -34,7 +34,8 @@ class AudioEngine:
                 samplerate=self.sample_rate,
                 channels=2,
                 callback=self._audio_callback,
-                blocksize=256  # Low latency block size
+                blocksize=256,  # Low latency block size
+                latency='low'   # Request lowest OS-level audio latency path
             )
             self.stream.start()
             print("[AudioEngine] Real-time mixer stream started successfully.")

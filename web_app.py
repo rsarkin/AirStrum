@@ -145,8 +145,11 @@ def airstrum_loop():
                 app_state["fps"] = fps
                 app_state["synth_mode"] = audio_engine.synth_mode_active
                 
-            # Brief sleep to match target framerate and avoid pegging CPU
-            time.sleep(0.01)
+            # Dynamic frame rate limiter to match target FPS without static lag overhead
+            frame_duration = 1.0 / config.TARGET_FPS
+            elapsed = time.time() - current_time
+            sleep_time = max(0.001, frame_duration - elapsed)
+            time.sleep(sleep_time)
             
         except Exception as e:
             print(f"[Web Runner Exception] error: {e}")

@@ -73,8 +73,13 @@ class HandTracker:
         """
         h, w, _ = frame.shape
         
+        # Downscale frame for fast MediaPipe inference
+        scale_w = config.TRACKING_WIDTH
+        scale_h = config.TRACKING_HEIGHT
+        small_frame = cv2.resize(frame, (scale_w, scale_h), interpolation=cv2.INTER_LINEAR)
+        
         # MediaPipe Tasks API expects mp.Image
-        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        rgb_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
         mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
         
         # Calculate strictly increasing frame timestamp
@@ -105,10 +110,22 @@ class HandTracker:
                 landmarks_dict["wrist"] = (wrist.x * w, wrist.y * h)
                 landmarks_dict["wrist_normalized"] = (wrist.x, wrist.y)
                 
-                # Index Tip
+                # Index Tip (Landmark 8)
                 idx_tip = hand_landmarks[8]
                 landmarks_dict["index_tip"] = (idx_tip.x * w, idx_tip.y * h)
                 landmarks_dict["index_tip_normalized"] = (idx_tip.x, idx_tip.y)
+                
+                # Middle Tip (Landmark 12)
+                mid_tip = hand_landmarks[12]
+                landmarks_dict["middle_tip"] = (mid_tip.x * w, mid_tip.y * h)
+                
+                # Ring Tip (Landmark 16)
+                rng_tip = hand_landmarks[16]
+                landmarks_dict["ring_tip"] = (rng_tip.x * w, rng_tip.y * h)
+                
+                # Pinky Tip (Landmark 20)
+                pnk_tip = hand_landmarks[20]
+                landmarks_dict["pinky_tip"] = (pnk_tip.x * w, pnk_tip.y * h)
                 
                 # Index MCP
                 idx_mcp = hand_landmarks[5]

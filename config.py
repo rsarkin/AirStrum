@@ -7,7 +7,9 @@ Contains all constants, UI layout parameters, colors, and tuning tables.
 WINDOW_NAME = "Air Strum"
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
-TARGET_FPS = 45
+TARGET_FPS = 60
+TRACKING_WIDTH = 256
+TRACKING_HEIGHT = 144
 
 # OpenCV Color Palettes (BGR format)
 COLOR_BACKGROUND = (17, 17, 17)      # Hex #111111 (Dark background)
@@ -21,9 +23,9 @@ COLOR_GLOW_L_HAND = (255, 100, 100)  # Hex #6464FF (Soft Red/Pink for cursor)
 COLOR_GLOW_R_HAND = (100, 255, 100)  # Hex #64FF64 (Soft Green for pick)
 
 # Hand tracking settings
-MIN_DETECTION_CONFIDENCE = 0.7
-MIN_TRACKING_CONFIDENCE = 0.7
-CURSOR_SMOOTHING = 0.15              # EMA alpha (lower = smoother cursor, higher = more responsive)
+MIN_DETECTION_CONFIDENCE = 0.6
+MIN_TRACKING_CONFIDENCE = 0.6
+CURSOR_SMOOTHING = 0.30              # EMA alpha (lower = smoother cursor, higher = more responsive)
 
 # Chord Wheel settings
 CHORD_WHEEL_RADIUS_INNER = 45
