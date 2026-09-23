@@ -1,0 +1,6 @@
+# Ignore Python desktop app entrypoints so Vercel builds as static HTML5 web app
+*.py
+__pycache__/
+requirements.txt
+agent.md
+prd.md

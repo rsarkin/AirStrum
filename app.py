@@ -203,5 +203,10 @@ class AirStrumApp:
         print("[App] Shutdown complete.")
 
 if __name__ == "__main__":
-    app = AirStrumApp()
-    app.run()
+    app_instance = AirStrumApp()
+    app_instance.run()
+
+# Top-level alias export for cloud platforms scanner fallback
+app = None
+handler = None
+
