@@ -7,7 +7,13 @@ Contains all constants, UI layout parameters, colors, and tuning tables.
 WINDOW_NAME = "Air Strum"
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
-TARGET_FPS = 60
+TARGET_FPS = 120
+
+# Camera settings
+CAMERA_WIDTH = 1280
+CAMERA_HEIGHT = 720
+CAMERA_FOURCC = "MJPG"  # Use MJPG compression to unlock high FPS without saturating USB bandwidth
+
 TRACKING_WIDTH = 256
 TRACKING_HEIGHT = 144
 

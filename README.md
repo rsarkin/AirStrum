@@ -1,49 +1,46 @@
 # Air Strum 🎸
 
-Air Strum is a webcam-powered virtual acoustic guitar built with Python, OpenCV, and MediaPipe. It transforms a standard webcam feed into a responsive, playful digital instrument.
+Air Strum is a webcam-powered virtual acoustic guitar built with HTML5 Canvas, MediaPipe Hands, and Web Audio API. It transforms any web browser into a responsive, 60 FPS digital instrument.
 
 By dividing interactions between your hands:
-- **Left Hand**: Points at a chord on a floating radial chord wheel to select it.
-- **Right Hand**: Strum the air up or down to trigger realistic acoustic guitar chord sounds.
+- **Left Hand**: Points at a chord on a floating radial chord wheel to select it (`C, G, F, Am, Em, Dm`).
+- **Right Hand**: Strum the 6 vertical guitar strings or pluck individual notes to trigger instant acoustic guitar sounds.
 
 ---
 
-## Features
+## 🚀 Deploying on Vercel
 
-- **Floating Radial Chord Wheel**: Floating circular overlay featuring 6 chord segments (**C, G, F, Am, Em, Dm**).
-- **Hover Selection**: Hover the left index fingertip cursor over a chord segment for 300ms to select it, accompanied by a circular visual progress loader.
-- **Natural Strum Detection**: Automatically tracks right wrist vertical velocity to detect rapid **downstrokes** and **upstrokes**.
-- **Automated Physical Audio Synthesis**: If WAV recordings are not found in the assets folder, Air Strum automatically generates a high-quality physical modeling sound pack (using the **Karplus-Strong string-excitation algorithm**) at boot.
-- **Sleek UI & Micro-animations**: Glassmorphic UI layout, neon Gaussian selection glow, active chord expansion pulses, and strum wave ripples.
+Air Strum is 100% client-side and pre-configured for **1-click Vercel deployment** with zero backend configuration needed.
 
----
+### Option 1: Vercel CLI
+```bash
+npm install -g vercel
+vercel
+```
 
-## Requirements & Setup
-
-Air Strum requires Python 3.12+.
-
-### Installation
-
-1. Clone or copy the files into your workspace directory.
-2. Install the dependencies listed in `requirements.txt`:
-   ```bash
-   pip install -r requirements.txt
-   ```
-   *(Note: The audio engine leverages `sounddevice` which wraps PortAudio for low-latency playback).*
+### Option 2: GitHub / Vercel Dashboard
+1. Push this repository to GitHub.
+2. Import the project in your [Vercel Dashboard](https://vercel.com/new).
+3. Click **Deploy**. Vercel will automatically detect `index.html` and serve the site globally via CDN.
 
 ---
 
-## How to Play
+## ⚡ Features
 
-1. Run the application:
-   ```bash
-   python app.py
-   ```
-2. On first run, wait 1-2 seconds for the synthesizer to pre-generate and save the default audio chord pack (`assets/audio/acoustic/*.wav`).
+- **60 FPS Performance**: MediaPipe tracking and Canvas drawing run locally in the browser with `requestAnimationFrame`.
+- **Zero-Latency Audio**: Pre-loaded acoustic WAV chord samples with a real-time **Karplus-Strong physical modeling Web Audio synthesizer** fallback.
+- **Floating Radial Chord Wheel**: 6 chord segments (**C, G, F, Am, Em, Dm**) with interactive selection.
+- **Interactive String Plucking**: 6 vertical string lines with glowing wave ripple animations upon being struck.
+- **Dark Glassmorphic UI**: High-contrast modern dashboard layout with real-time tracking indicators.
+
+---
+
+## 🎮 How to Play
+
+1. Open `index.html` locally or visit your deployed Vercel URL.
+2. Allow webcam permission when prompted by the browser.
 3. Sit or stand facing your webcam:
-   - **Hold up your Left Hand**: Use your index finger to point at chord segments. Hover for 300ms to lock it in. The selected chord will glow green and scale up.
-   - **Hold up your Right Hand**: Perform a quick vertical sweep (down or up) to play the active chord.
+   - **Left Hand**: Point at chord segments on the radial wheel to lock in your active chord.
+   - **Right Hand**: Sweep your index finger across the 6 vertical strings on the right to strum or pluck.
 4. **Controls**:
-   - `ESC` or `Q`: Exit the application.
-   - `D`: Toggle raw MediaPipe tracking skeletons (debug overlay).
-   - `C`: Cycle camera sources (if you have multiple webcams).
+   - `D`: Toggle raw MediaPipe tracking skeletons overlay.

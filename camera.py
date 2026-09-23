@@ -7,21 +7,29 @@ import cv2
 import threading
 import time
 from typing import Optional, Tuple
+import config
 
 class Camera:
     """
     Manages webcam capture in a separate thread to prevent frame reading
     from blocking the main rendering and gesture detection loop.
     """
-    def __init__(self, device_index: int = 0, resolution: Tuple[int, int] = (1280, 720)):
+    def __init__(self, device_index: int = 0, resolution: Optional[Tuple[int, int]] = None):
         self.device_index = device_index
+        if resolution is None:
+            resolution = (config.CAMERA_WIDTH, config.CAMERA_HEIGHT)
         self.resolution = resolution
         self.cap = cv2.VideoCapture(self.device_index)
         
+        # Set FOURCC compression mode if specified (e.g. MJPG)
+        if hasattr(config, 'CAMERA_FOURCC') and config.CAMERA_FOURCC:
+            fourcc = cv2.VideoWriter_fourcc(*config.CAMERA_FOURCC)
+            self.cap.set(cv2.CAP_PROP_FOURCC, fourcc)
+            
         # Set preferred resolution and frame rate
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, resolution[0])
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, resolution[1])
-        self.cap.set(cv2.CAP_PROP_FPS, 60)
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.resolution[0])
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.resolution[1])
+        self.cap.set(cv2.CAP_PROP_FPS, config.TARGET_FPS)
         
         self.frame = None
         self.running = False

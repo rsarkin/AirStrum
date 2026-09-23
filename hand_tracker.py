@@ -96,7 +96,11 @@ class HandTracker:
             "Right": {}   # Physical Right Hand (Strummer)
         }
         
+        raw_list = []
         if results.hand_landmarks and results.handedness:
+            for hand_landmarks in results.hand_landmarks:
+                raw_list.append([(lm.x, lm.y) for lm in hand_landmarks])
+                
             for hand_landmarks, hand_handedness in zip(results.hand_landmarks, results.handedness):
                 # Physical Left Hand = MediaPipe "Right" label in mirrored view
                 mp_label = hand_handedness[0].category_name
@@ -170,6 +174,7 @@ class HandTracker:
             # Clear cursor cache if physical left hand leaves screen
             self._smoothed_cursor = None
             
+        detected_hands["_raw_landmarks"] = raw_list
         return detected_hands, frame
 
     def close(self) -> None:

@@ -17,6 +17,7 @@ from gesture_detector import GestureDetector
 from chord_wheel import ChordWheel
 from audio_engine import AudioEngine
 from renderer import UIRenderer
+from tracking_thread import TrackingRunner
 
 # Disable flask request logging to clean terminal output
 log = logging.getLogger('werkzeug')
@@ -59,6 +60,10 @@ def airstrum_loop():
     chord_wheel = ChordWheel()
     renderer = UIRenderer()
     
+    # Start background tracking thread
+    tracking_runner = TrackingRunner(camera, hand_tracker)
+    tracking_runner.start()
+    
     prev_time = time.time()
     fps = 30.0
     
@@ -69,10 +74,13 @@ def airstrum_loop():
             # Check for camera cycle request
             if app_state["camera_cycle_requested"]:
                 print("[Web Runner] Cycling camera source...")
+                tracking_runner.stop()
                 camera.release()
                 camera_index = (camera_index + 1) % 4
                 camera = Camera(device_index=camera_index, resolution=(config.WINDOW_WIDTH, config.WINDOW_HEIGHT))
                 camera.start()
+                tracking_runner.camera = camera
+                tracking_runner.start()
                 with state_lock:
                     app_state["camera_cycle_requested"] = False
                 
@@ -109,8 +117,22 @@ def airstrum_loop():
                 time.sleep(0.03)
                 continue
                 
-            # Process frame with MediaPipe
-            hands_data, processed_frame = hand_tracker.process_frame(frame, draw_landmarks=True)
+            # Get latest tracking data
+            hands_data, raw_landmarks = tracking_runner.get_latest_data()
+            
+            # Draw standard hand landmarks for feedback (skeletons)
+            h, w, _ = frame.shape
+            from hand_tracker import HAND_CONNECTIONS
+            for hand_lms in raw_landmarks:
+                for connection in HAND_CONNECTIONS:
+                    start_idx, end_idx = connection
+                    if start_idx < len(hand_lms) and end_idx < len(hand_lms):
+                        pt1 = (int(hand_lms[start_idx][0] * w), int(hand_lms[start_idx][1] * h))
+                        pt2 = (int(hand_lms[end_idx][0] * w), int(hand_lms[end_idx][1] * h))
+                        cv2.line(frame, pt1, pt2, (80, 80, 80), 1)
+                for lm in hand_lms:
+                    pt = (int(lm[0] * w), int(lm[1] * h))
+                    cv2.circle(frame, pt, 2, (120, 120, 120), -1)
             
             # Update Chord Wheel (Left hand cursor)
             left_hand = hands_data.get("Left", {})
@@ -130,7 +152,7 @@ def airstrum_loop():
             # Render UI
             renderer.update_animations(hovered_chord, chord_wheel.active_chord)
             ui_frame = renderer.draw(
-                processed_frame, hands_data, hovered_chord, hover_progress,
+                frame, hands_data, hovered_chord, hover_progress,
                 chord_wheel.active_chord, fps, audio_engine.synth_mode_active
             )
             
@@ -156,6 +178,7 @@ def airstrum_loop():
             time.sleep(0.1)
             
     # Cleanup camera/session
+    tracking_runner.stop()
     camera.release()
     hand_tracker.close()
     audio_engine.shutdown()
@@ -167,7 +190,11 @@ def index():
 
 def gen_frames():
     last_version = -1
+    stream_fps = 30.0  # Cap streaming FPS to reduce CPU compression and network bandwidth lag
+    frame_duration = 1.0 / stream_fps
+    
     while True:
+        start_time = time.time()
         frame = None
         version = -1
         with state_lock:
@@ -176,14 +203,18 @@ def gen_frames():
             
         if frame is not None and version != last_version:
             last_version = version
-            # Resize frame down slightly to 854x480 (16:9) to optimize network bandwidth
-            small_frame = cv2.resize(frame, (854, 480), interpolation=cv2.INTER_AREA)
-            # Encode at 70% JPEG quality to drastically reduce CPU rendering time and bandwidth
-            ret, buffer = cv2.imencode('.jpg', small_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 70])
+            # Downscale frame size to 640x360 (16:9) to optimize network bandwidth
+            small_frame = cv2.resize(frame, (640, 360), interpolation=cv2.INTER_AREA)
+            # Encode at 60% JPEG quality to drastically reduce CPU rendering time and bandwidth
+            ret, buffer = cv2.imencode('.jpg', small_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 60])
             if ret:
                 yield (b'--frame\r\n'
                        b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
-        time.sleep(0.005) # Yield thread briefly to prevent high CPU usage
+                       
+        # Dynamic frame rate limiter for streaming
+        elapsed = time.time() - start_time
+        sleep_time = max(0.005, frame_duration - elapsed)
+        time.sleep(sleep_time)
 
 @app.route('/video_feed')
 def video_feed():
@@ -192,6 +223,7 @@ def video_feed():
 @app.route('/status')
 def get_status():
     with state_lock:
+        print(f"[Web Server] get_status called. Current app_state: {app_state}")
         return jsonify({
             "left_tracked": app_state["left_tracked"],
             "right_tracked": app_state["right_tracked"],
@@ -213,6 +245,6 @@ if __name__ == '__main__':
     bg_thread = threading.Thread(target=airstrum_loop, daemon=True)
     bg_thread.start()
     
-    # Run local server
+    # Run local server with multithreading enabled so AJAX calls are not blocked by streaming
     print("[Web Runner] Running Flask server on http://127.0.0.1:5000")
-    app.run(host='127.0.0.1', port=5000, debug=False, use_reloader=False)
+    app.run(host='127.0.0.1', port=5000, debug=False, use_reloader=False, threaded=True)

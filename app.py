@@ -13,6 +13,7 @@ from gesture_detector import GestureDetector
 from chord_wheel import ChordWheel
 from audio_engine import AudioEngine
 from renderer import UIRenderer
+from tracking_thread import TrackingRunner
 
 class AirStrumApp:
     """
@@ -43,6 +44,10 @@ class AirStrumApp:
         self.gesture_detector = GestureDetector()
         self.chord_wheel = ChordWheel()
         self.renderer = UIRenderer()
+        
+        # Start background tracking thread
+        self.tracking_runner = TrackingRunner(self.camera, self.hand_tracker)
+        self.tracking_runner.start()
         
         self.prev_time = time.time()
         self.fps = 30.0  # Base FPS placeholder
@@ -119,8 +124,12 @@ class AirStrumApp:
                 
                 cv2.imshow(config.WINDOW_NAME, err_frame)
             else:
-                # 3. Process frame with MediaPipe
-                hands_data, processed_frame = self.hand_tracker.process_frame(frame, draw_landmarks=self.debug_mode)
+                # 3. Retrieve latest tracking data from background thread
+                hands_data, raw_landmarks = self.tracking_runner.get_latest_data()
+                
+                # Draw debug landmarks if enabled
+                if self.debug_mode:
+                    self.draw_debug_skeletons(frame, raw_landmarks)
                 
                 # 4. Update chord selector (Left Hand index cursor)
                 left_hand = hands_data.get("Left", {})
@@ -144,7 +153,7 @@ class AirStrumApp:
                 # 6. Animate and render UI
                 self.renderer.update_animations(hovered_chord, self.chord_wheel.active_chord)
                 ui_frame = self.renderer.draw(
-                    processed_frame, hands_data, hovered_chord, hover_progress,
+                    frame, hands_data, hovered_chord, hover_progress,
                     self.chord_wheel.active_chord, self.fps, self.audio_engine.synth_mode_active
                 )
                 
@@ -160,11 +169,33 @@ class AirStrumApp:
             elif key == ord('c'): # C to cycle camera sources
                 self.cycle_camera()
                 
+            # 8. Dynamic frame rate limiter to match target FPS
+            frame_duration = 1.0 / config.TARGET_FPS
+            elapsed = time.time() - current_time
+            sleep_time = max(0.001, frame_duration - elapsed)
+            time.sleep(sleep_time)
+                
         self.cleanup()
+
+    def draw_debug_skeletons(self, frame, raw_landmarks) -> None:
+        """Draws standard hand landmarks skeletons directly on the BGR frame."""
+        h, w, _ = frame.shape
+        from hand_tracker import HAND_CONNECTIONS
+        for hand_lms in raw_landmarks:
+            for connection in HAND_CONNECTIONS:
+                start_idx, end_idx = connection
+                if start_idx < len(hand_lms) and end_idx < len(hand_lms):
+                    pt1 = (int(hand_lms[start_idx][0] * w), int(hand_lms[start_idx][1] * h))
+                    pt2 = (int(hand_lms[end_idx][0] * w), int(hand_lms[end_idx][1] * h))
+                    cv2.line(frame, pt1, pt2, (80, 80, 80), 1)
+            for lm in hand_lms:
+                pt = (int(lm[0] * w), int(lm[1] * h))
+                cv2.circle(frame, pt, 2, (120, 120, 120), -1)
 
     def cleanup(self) -> None:
         """Closes all hardware streams and shuts down libraries."""
         print("[App] Beginning shutdown sequence...")
+        self.tracking_runner.stop()
         self.camera.release()
         self.hand_tracker.close()
         self.audio_engine.shutdown()
